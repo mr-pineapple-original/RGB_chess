@@ -1,19 +1,35 @@
 @echo off
-REM Compile main.cpp using g++
-g++ -g  source\main.cpp source\player.cpp source\sprite.cpp -o source\main -I"C:\msys64\ucrt64\include" -L"C:\msys64\ucrt64\lib" -lraylib -lopengl32 -lgdi32 -lwinmm 
+setlocal
 
-REM Check if compilation succeeded
-if %errorlevel% neq 0 (
+REM Compiler
+set CXX=g++
+
+REM Paths
+set SRC=source
+set OUT=source\main.exe
+
+REM Raylib paths (MSYS2 ucrt64)
+set INCLUDE=C:\msys64\ucrt64\include
+set LIB=C:\msys64\ucrt64\lib
+
+REM Compile all cpp files in source/
+%CXX% -g %SRC%\*.cpp ^
+    -I"%INCLUDE%" ^
+    -L"%LIB%" ^
+    -lraylib -lopengl32 -lgdi32 -lwinmm ^
+    -o %OUT%
+
+IF %ERRORLEVEL% NEQ 0 (
     echo.
     echo Compilation failed!
-    exit /b %errorlevel%
+    exit /b %ERRORLEVEL%
 )
 
 echo.
 echo Compilation successful. Running program...
 echo.
 
-REM Run the compiled program
-.\source\main.exe
+%OUT%
 
-echo.
+endlocal
+
