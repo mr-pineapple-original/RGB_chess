@@ -75,60 +75,7 @@ void precomputed_move_data()
         }
     }
 }
-// UHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
-// struct Move_piece{
-//     const int start_square;
-//     const int target_square;
-// };
 
-// void generate_sliding_moves(int start_square, int piece)
-// {
-//     int start_index = (chess_pieces.IsType(piece,chess_pieces.bishop)) ? 4 : 0;
-//     int end_index = (chess_pieces.IsType(piece,chess_pieces.rook)) ? 4 : 8;
-//     for(int direction_index = start_index; direction_index < end_index; direction_index++)
-//     {
-//         for(int n = 0; n < num_squares_to_edge[start_square][direction_index]; n++)
-//         {
-//             int target_square = start_square +  direction_offsets[direction_index] * (n+1);
-//             int piece_on_target_square = squares[target_square];
-
-//             // Blocked by friendly piece so we can't move any further in the direction
-//             if(piece.IsColour(piece_on_target_square,friendly_color))
-//             {
-//                 break;
-//             }
-
-//             moves.Add (move(start_square,target_square));
-
-//             // Can't move any firther in this direction after capturing opponent's piece
-//             if(piece.IsColour(piece_on_target_square,opponent_colour))
-//             {
-//                 break;
-//             }
-//         }
-//     }
-// }
-// // To fix
-// List<move> moves;
-// List<move> generate_moves()
-// {
-//     moves = List<move> ();
-//     for(int start_square = 0; start_square < 64; start_square++)
-//     {
-//         int piece = Board.Square[start_square];
-//         if(chess_pieces.isColor(piece,Board.ColourToMove))
-//         {
-//             if(chess_pieces.is_sliding_piece(piece))
-//             {
-//                 generate_sliding_moves (start_square,piece);
-//             }
-//         }
-//     }
-//     return moves;
-// }
-
-// Attempt
-// Your Move_piece struct
 struct Move_piece {
     int start_square;
     int target_square;
@@ -266,14 +213,22 @@ void draw_pieces()
             square_size,
             square_size
         };
-
+        Color color;
+        bool is_white = piece & chess_pieces::white;
+        bool is_black = piece & chess_pieces::black;
+        if (is_white) {
+            color = WHITE;
+        }
+        else if (is_black) {
+            color = GRAY;
+        }
         DrawTexturePro(
             sprite.texture,
             sprite.src,
             dest,
             {0, 0},
             0.0f,
-            WHITE
+            color
         );
     }
 }
