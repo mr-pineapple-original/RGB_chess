@@ -16,13 +16,14 @@ void create_chess_board()
     }
 }
 
-// class chess_pieces
-// {   
-//     public:
-//         static const int none = 0;
-//         static const int king = 1;
-//         static const int pawn = 2;
-//         static const int knight = 3;
-//         static const int bishop = 4;
-//         static const int 
-// };
+class chess_pieces
+{   
+    public:
+        static const int none = 0;
+        static const int king = 1;
+        static const int pawn = 2;
+        static const int knight = 3;
+        static const int bishop = 4;
+        static const int rook = 5;
+        static const int queen = 6;
+};  
