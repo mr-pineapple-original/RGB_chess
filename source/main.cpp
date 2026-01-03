@@ -1,3 +1,4 @@
+#pragma once
 // Normal Libraries
 #include <iostream>
 #include <vector>
@@ -38,19 +39,19 @@ int main()
         DrawText("Congrats! You created your first window!", 0 , 0, 20, GREEN);
         if(game_state == false)
         {
-
+            main_menu_display();
             Player player;
             player.handle_user_input();
+        }
+        else
+        {
             Sprite2D sprite = get_sprite(Type::Knight);
-
             DrawTextureRec(
                 sprite.texture,
                 sprite.src,
                 Vector2{100, 100},
                 WHITE
             );
-
-            main_menu_display();
         }
         EndDrawing();
     }
