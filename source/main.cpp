@@ -27,11 +27,9 @@ int main()
     // grid.height = grid_height; // full height
     // DrawRectangleRec(grid,GREEN);
     // DrawRectangleLinesEx(grid,2,WHITE);
-    SetConfigFlags(FLAG_FULLSCREEN_MODE);
     InitWindow(screen_width, screen_height, "RGB Chess");
     SetTargetFPS(60);
-    InitAudioDevice(); // Sets up the audio according to the device to use it in the game
-
+    InitAudioDevice();
     while (!WindowShouldClose()) // When game is opened
     {
         BeginDrawing();
