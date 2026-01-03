@@ -1,5 +1,6 @@
 #pragma once
 #include<iostream>
+#include<algorithm>
 #include<vector>
 #include<raylib.h>
 
@@ -41,7 +42,7 @@ class chess_fen_encryption
 };
 
 static constexpr int direction_offsets[8] = {8,-8,-1,1,7,-7,9,-9}; 
-static constexpr std::vector<std::vector<int>> num_squares_to_edge;
+static std::vector<std::vector<int>> num_squares_to_edge(64, std::vector<int>(8,0));
 
 void static precomputed_move_data()
 {
@@ -54,17 +55,17 @@ void static precomputed_move_data()
             int num_west = rows;
             int num_east = 7 - rows;
 
-            int square_index = cols * 8 + rows;
-            num_squares_to_edge[square_index] = {
-                num_north,
-                num_south,
-                num_west,
-                num_east,
-                Min(num_north, num_west),
-                Min(num_south, num_east),
-                Min(num_north, num_east),
-                Min(num_south,num_west),
-            };
+                int square_index = cols * 8 + rows;
+                num_squares_to_edge[square_index] = {
+                    num_north,
+                    num_south,
+                    num_west,
+                    num_east,
+                    std::min(num_north, num_west),
+                    std::min(num_south, num_east),
+                    std::min(num_north, num_east),
+                    std::min(num_south,num_west),
+                };
         }
     }
 }
