@@ -1,4 +1,4 @@
-#include "mainmenu.hpp"
+#include "main_menu.hpp"
 #include "game_state.hpp"
 #include <cstdlib>
 

@@ -1,51 +1,294 @@
-#pragma once
-#include<iostream>
-#include<cctype>
-#include<unordered_map> // Of course we need to use data structures to make this program
-#include "chess.hpp"        
-const std::string start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-std::string fen;
-// static void load_position_fen(string fen)
-// {
-//      var piece_type_from_symbol = new Dictionary<char,int>()
-//      {
-//         ['k'] = chess_pieces.king, ['p'] = chess_pieces.pawn, ['n'] = chess_pieces.knight,
-//         ['b'] = chess_pieces.bishop, ['r'] = chess_pieces.rook, ['q'] = chess_pieces.queen
-//      };
-// };
-std::unordered_map<char,int> load_position_fen(std::string fen)
+#include "chess.hpp"
+#include "sprite.hpp"
+
+#include <iostream>
+#include <cctype>
+#include <unordered_map>
+#include <algorithm>
+
+// ====== Globals ======
+int squares[64] = {0};
+
+const std::string start_fen =
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+const int direction_offsets[8] = { 8, -8, -1, 1, 7, -7, 9, -9 };
+
+std::vector<std::vector<int>> num_squares_to_edge(64, std::vector<int>(8, 0));
+
+// ====== Board drawing ======
+void create_chess_board()
 {
-    std::unordered_map<char,int> piece_type_from_symbol = {
-    {'k', chess_pieces::king},
-    {'p', chess_pieces::pawn},
-    {'n', chess_pieces::knight},
-    {'b', chess_pieces::bishop},
-    {'r', chess_pieces::rook},
-    {'q', chess_pieces::queen}
-};
-    std::string fen_board = fen.substr(0, fen.find(' '));
-    int rows = 0, cols = 7;
-    for (char symbol : fen_board)
+    float square_size = GetScreenHeight() / 8.0f;
+
+    float board_width  = square_size * 8;
+    float board_height = square_size * 8;
+
+    float offset_x = (GetScreenWidth()  - board_width)  / 2.0f;
+    float offset_y = (GetScreenHeight() - board_height) / 2.0f;
+
+    for (int row = 0; row < 8; row++)
     {
-        if(symbol=='/')
+        for (int col = 0; col < 8; col++)
         {
-            rows = 0;
-            cols--;
+            bool is_light = (row + col) % 2 == 0;
+            Color color = is_light ? RAYWHITE : DARKGRAY;
+
+            float x = offset_x + col * square_size;
+            float y = offset_y + row * square_size;
+
+            DrawRectangle(
+                (int)x,
+                (int)y,
+                (int)square_size,
+                (int)square_size,
+                color
+            );
+        }
+    }
+}
+
+// ====== Precompute move data ======
+void precomputed_move_data()
+{
+    for (int row = 0; row < 8; row++)
+    {
+        for (int col = 0; col < 8; col++)
+        {
+            int north = 7 - row;
+            int south = row;
+            int west  = col;
+            int east  = 7 - col;
+
+            int index = row * 8 + col;
+
+            num_squares_to_edge[index] = {
+                north,
+                south,
+                west,
+                east,
+                std::min(north, west),
+                std::min(south, east),
+                std::min(north, east),
+                std::min(south, west)
+            };
+        }
+    }
+}
+// UHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
+// struct Move_piece{
+//     const int start_square;
+//     const int target_square;
+// };
+
+// void generate_sliding_moves(int start_square, int piece)
+// {
+//     int start_index = (chess_pieces.IsType(piece,chess_pieces.bishop)) ? 4 : 0;
+//     int end_index = (chess_pieces.IsType(piece,chess_pieces.rook)) ? 4 : 8;
+//     for(int direction_index = start_index; direction_index < end_index; direction_index++)
+//     {
+//         for(int n = 0; n < num_squares_to_edge[start_square][direction_index]; n++)
+//         {
+//             int target_square = start_square +  direction_offsets[direction_index] * (n+1);
+//             int piece_on_target_square = squares[target_square];
+
+//             // Blocked by friendly piece so we can't move any further in the direction
+//             if(piece.IsColour(piece_on_target_square,friendly_color))
+//             {
+//                 break;
+//             }
+
+//             moves.Add (move(start_square,target_square));
+
+//             // Can't move any firther in this direction after capturing opponent's piece
+//             if(piece.IsColour(piece_on_target_square,opponent_colour))
+//             {
+//                 break;
+//             }
+//         }
+//     }
+// }
+// // To fix
+// List<move> moves;
+// List<move> generate_moves()
+// {
+//     moves = List<move> ();
+//     for(int start_square = 0; start_square < 64; start_square++)
+//     {
+//         int piece = Board.Square[start_square];
+//         if(chess_pieces.isColor(piece,Board.ColourToMove))
+//         {
+//             if(chess_pieces.is_sliding_piece(piece))
+//             {
+//                 generate_sliding_moves (start_square,piece);
+//             }
+//         }
+//     }
+//     return moves;
+// }
+
+// Attempt
+// Your Move_piece struct
+struct Move_piece {
+    int start_square;
+    int target_square;
+};
+
+// Vector to store moves globally (or pass by reference)
+std::vector<Move_piece> moves;
+
+// Helper functions
+bool is_type(int piece, int type) {
+    return (piece & 7) == type; // mask color bits
+}
+
+bool is_colour(int piece, int colour) {
+    return (piece & (chess_pieces::white | chess_pieces::black)) == colour;
+}
+
+bool is_sliding_piece(int piece) {
+    int t = piece & 7;
+    return t == chess_pieces::rook || t == chess_pieces::bishop || t == chess_pieces::queen;
+}
+
+// Sliding moves generator
+void generate_sliding_moves(int start_square, int piece, int friendly_color, int opponent_color)
+{
+    int start_index = is_type(piece, chess_pieces::bishop) ? 4 : 0;
+    int end_index   = is_type(piece, chess_pieces::rook)   ? 4 : 8;
+
+    for (int direction_index = start_index; direction_index < end_index; direction_index++)
+    {
+        for (int n = 0; n < num_squares_to_edge[start_square][direction_index]; n++)
+        {
+            int target_square = start_square + direction_offsets[direction_index] * (n + 1);
+            int piece_on_target_square = squares[target_square];
+
+            // Blocked by friendly piece
+            if (is_colour(piece_on_target_square, friendly_color)) break;
+
+            // Add move
+            moves.push_back({start_square, target_square});
+
+            // Can't go further if we capture opponent
+            if (is_colour(piece_on_target_square, opponent_color)) break;
+        }
+    }
+}
+
+// Generate all moves
+std::vector<Move_piece> generate_moves(int colour_to_move)
+{
+    moves.clear(); // start fresh
+
+    int friendly_color = colour_to_move;
+    int opponent_color = (colour_to_move == chess_pieces::white) ? chess_pieces::black : chess_pieces::white;
+
+    for (int start_square = 0; start_square < 64; start_square++)
+    {
+        int piece = squares[start_square];
+        if (piece == chess_pieces::none) continue;
+
+        if (is_colour(piece, friendly_color))
+        {
+            if (is_sliding_piece(piece))
+            {
+                generate_sliding_moves(start_square, piece, friendly_color, opponent_color);
+            }
+            // TODO: handle non-sliding pieces (pawn, knight, king)
+        }
+    }
+}
+
+// ====== FEN loader ======
+std::unordered_map<char, int> load_position_fen(const std::string& fen)
+{
+    std::unordered_map<char, int> piece_map = {
+        {'k', chess_pieces::king},
+        {'p', chess_pieces::pawn},
+        {'n', chess_pieces::knight},
+        {'b', chess_pieces::bishop},
+        {'r', chess_pieces::rook},
+        {'q', chess_pieces::queen}
+    };
+
+    std::string board = fen.substr(0, fen.find(' '));
+
+    int row = 7, col = 0;
+
+    for (char c : board)
+    {
+        if (c == '/')
+        {
+            row--;
+            col = 0;
+        }
+        else if (std::isdigit(c))
+        {
+            col += c - '0';
         }
         else
         {
-            if(std::isdigit(symbol))
-            {
-                rows = rows +  symbol - '0';
-            }
-            else
-            {
-                int piece_colour = (std::isupper(symbol)) ? chess_pieces::white : chess_pieces::black;
-                int piece_type = piece_type_from_symbol[std::tolower(symbol)];
-                squares[cols * 8 + rows] = piece_type | piece_colour;
-                rows++;
-            }
+            int color = std::isupper(c)
+                        ? chess_pieces::white
+                        : chess_pieces::black;
+
+            int piece = piece_map[std::tolower(c)];
+            squares[row * 8 + col] = piece | color;
+            col++;
         }
     }
-    return piece_type_from_symbol;
+
+    return piece_map;
 }
+
+
+
+void draw_pieces()
+{
+    float square_size = GetScreenHeight() / 8.0f;
+    float offset_x = (GetScreenWidth() - square_size * 8) / 2.0f;
+    float offset_y = (GetScreenHeight() - square_size * 8) / 2.0f;
+
+    for (int index = 0; index < 64; index++)
+    {
+        int piece = squares[index];
+        if (piece == chess_pieces::none) continue;
+
+        int row = index / 8;
+        int col = index % 8;
+
+        Sprite2D sprite = get_sprite(piece_to_sprite(piece));
+
+        Rectangle dest = {
+            offset_x + col * square_size,
+            offset_y + row * square_size,
+            square_size,
+            square_size
+        };
+
+        DrawTexturePro(
+            sprite.texture,
+            sprite.src,
+            dest,
+            {0, 0},
+            0.0f,
+            WHITE
+        );
+    }
+}
+
+Type piece_to_sprite(int piece)
+{
+    switch (piece & 7) // mask color bits
+    {
+        case chess_pieces::pawn:   return Type::Pawn;
+        case chess_pieces::rook:   return Type::Rook;
+        case chess_pieces::knight: return Type::Knight;
+        case chess_pieces::bishop: return Type::Bishop;
+        case chess_pieces::queen:  return Type::Queen;
+        case chess_pieces::king:   return Type::King;
+        default:                   return Type::Pawn; // safe fallback
+    }
+}
+
