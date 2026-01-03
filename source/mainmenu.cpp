@@ -2,29 +2,64 @@
 #include "game_state.hpp"
 #include <cstdlib>
 
-static bool is_text_button_clicked(const char *text, int x_position,
-                                   int y_position, int font_size) {
-  int width = MeasureText(text, font_size);
-  Rectangle bounds{(float)x_position, (float)y_position, (float)width,
-                   (float)font_size};
+static Texture2D startButtonTex = {};
+static Texture2D exitButtonTex = {};
+static bool buttons_loaded = false;
 
-  Vector2 mouse = GetMousePosition();
-  return CheckCollisionPointRec(mouse, bounds) &&
-         IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+static void load_buttons() {
+  if (buttons_loaded)
+    return;
+
+  startButtonTex = LoadTexture("sprites/start-button.png");
+  exitButtonTex = LoadTexture("sprites/exit-button.png");
+
+  buttons_loaded = true;
 }
 
+static bool animated_sprite_button(Texture2D texture, int x, int y, float scale,
+                                   float frame_time) {
+  static float timer = 0.0f;
+  static int frame = 0;
+
+  constexpr int FRAME_W = 32;
+  constexpr int FRAME_H = 16;
+
+  int frame_count = texture.width / FRAME_W;
+
+  timer += GetFrameTime();
+  if (timer >= frame_time) {
+    timer = 0.0f;
+    frame = (frame + 1) % frame_count;
+  }
+
+  Rectangle src{(float)(frame * FRAME_W), 0.0f, (float)FRAME_W, (float)FRAME_H};
+
+  Rectangle dst{(float)x, (float)y, FRAME_W * scale, FRAME_H * scale};
+
+  DrawTexturePro(texture, src, dst, Vector2{0, 0}, 0.0f, WHITE);
+
+  Vector2 mouse = GetMousePosition();
+  bool hovered = CheckCollisionPointRec(mouse, dst);
+
+  return hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+}
 void main_menu_display() {
-  const int start_x = GetScreenWidth() / 2 - 120;
-  const int start_y = GetScreenHeight() / 2 - 60;
-  const int exit_x = GetScreenWidth() / 2 - 120;
-  const int exit_y = GetScreenHeight() / 2 - 20;
+  load_buttons();
 
-  DrawText("Start Game", start_x, start_y, 40, LIGHTGRAY);
-  DrawText("Exit Game", exit_x, exit_y, 40, LIGHTGRAY);
+  const int scale = 4;
+  const int btn_w = 32 * scale;
+  const int btn_h = 16 * scale;
+  const int gap = 20;
 
-  if (is_text_button_clicked("Start Game", start_x, start_y, 40))
+  const int start_x = GetScreenWidth() / 2 - btn_w / 2;
+  const int exit_x = start_x;
+
+  const int start_y = GetScreenHeight() / 2 - btn_h - gap / 2;
+  const int exit_y = GetScreenHeight() / 2 + gap / 2;
+
+  if (animated_sprite_button(startButtonTex, start_x, start_y, scale, 0.25f))
     game_state = GameState::Started;
 
-  if (is_text_button_clicked("Exit Game", exit_x, exit_y, 40))
+  if (animated_sprite_button(exitButtonTex, exit_x, exit_y, scale, 0.25f))
     std::exit(0);
 }
