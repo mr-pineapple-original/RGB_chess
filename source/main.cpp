@@ -35,7 +35,6 @@ int main()
     while (!WindowShouldClose()) // When game is opened
     {
         BeginDrawing();
-        /* code */
         DrawText("Congrats! You created your first window!", 0 , 0, 20, GREEN);
         if(game_state == false)
         {
