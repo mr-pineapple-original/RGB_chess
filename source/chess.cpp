@@ -261,7 +261,7 @@ void draw_pieces()
 
                 DrawCircle(cx, cy, square_size * 0.15f, Fade(BLACK, 0.5f));
             }
-            std::cout << "[Piece Clicked]: " << piece << "[Moves]: " << moves[0] << std::endl;
+            std::cout << "[Piece Clicked]: " << piece << "[Moves]: " << std::endl;
         }
 
         
