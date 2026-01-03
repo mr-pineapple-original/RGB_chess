@@ -1,7 +1,7 @@
 #!/bin/bash
 # Compile main.cpp using g++
 
-g++ -g source/main.cpp source/player.cpp -o source/main -I/usr/include -L/usr/lib -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+g++ -g source/main.cpp source/player.cpp source/sprite.cpp -o source/main -I/usr/include -L/usr/lib -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
 # Check if compilation succeeded
 if [ $? -ne 0 ]; then

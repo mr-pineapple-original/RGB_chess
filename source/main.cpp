@@ -1,4 +1,3 @@
-#pragma once
 // Normal Libraries
 #include <iostream>
 #include <vector>
@@ -8,6 +7,8 @@
 // My libraries
 #include "mainmenu.hpp"
 #include "player.hpp"
+#include "sprite.hpp"
+
 // Using namespace
 using namespace std;
 bool game_state = false;
@@ -40,6 +41,15 @@ int main()
 
             Player player;
             player.handle_user_input();
+            Sprite2D sprite = get_sprite(Type::Knight);
+
+            DrawTextureRec(
+                sprite.texture,
+                sprite.src,
+                Vector2{100, 100},
+                WHITE
+            );
+
             main_menu_display();
         }
         EndDrawing();
