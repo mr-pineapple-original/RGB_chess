@@ -8,6 +8,15 @@
 
 // ====== Globals ======
 int squares[64] = {0};
+int selected_piece = ChessPiece::none;
+float board_x = 0.0f;
+float board_y = 0.0f;
+float square_size = 0.0f;
+
+
+
+
+
 
 const std::string start_fen =
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -15,6 +24,20 @@ const std::string start_fen =
 const int direction_offsets[8] = { 8, -8, -1, 1, 7, -7, 9, -9 };
 
 std::vector<std::vector<int>> num_squares_to_edge(64, std::vector<int>(8, 0));
+
+struct Move_piece {
+    int start_square;
+    int target_square;
+};
+// Vector to store moves globally (or pass by reference)
+std::vector<Move_piece> moves;
+
+void update_board_metrics()
+{
+    square_size = GetScreenHeight() / 8.0f;
+    board_x = (GetScreenWidth()  - square_size * 8) / 2.0f;
+    board_y = (GetScreenHeight() - square_size * 8) / 2.0f;
+}
 
 // ====== Board drawing ======
 void create_chess_board()
@@ -76,13 +99,6 @@ void precomputed_move_data()
     }
 }
 
-struct Move_piece {
-    int start_square;
-    int target_square;
-};
-
-// Vector to store moves globally (or pass by reference)
-std::vector<Move_piece> moves;
 
 // Helper functions
 bool is_type(int piece, int type) {
@@ -90,19 +106,19 @@ bool is_type(int piece, int type) {
 }
 
 bool is_colour(int piece, int colour) {
-    return (piece & (chess_pieces::white | chess_pieces::black)) == colour;
+    return (piece & (ChessPiece::white | ChessPiece::black)) == colour;
 }
 
 bool is_sliding_piece(int piece) {
     int t = piece & 7;
-    return t == chess_pieces::rook || t == chess_pieces::bishop || t == chess_pieces::queen;
+    return t == ChessPiece::rook || t == ChessPiece::bishop || t == ChessPiece::queen;
 }
 
-// Sliding moves generator
+
 void generate_sliding_moves(int start_square, int piece, int friendly_color, int opponent_color)
 {
-    int start_index = is_type(piece, chess_pieces::bishop) ? 4 : 0;
-    int end_index   = is_type(piece, chess_pieces::rook)   ? 4 : 8;
+    int start_index = is_type(piece, ChessPiece::bishop) ? 4 : 0;
+    int end_index   = is_type(piece, ChessPiece::rook)   ? 4 : 8;
 
     for (int direction_index = start_index; direction_index < end_index; direction_index++)
     {
@@ -129,12 +145,12 @@ std::vector<Move_piece> generate_moves(int colour_to_move)
     moves.clear(); // start fresh
 
     int friendly_color = colour_to_move;
-    int opponent_color = (colour_to_move == chess_pieces::white) ? chess_pieces::black : chess_pieces::white;
+    int opponent_color = (colour_to_move == ChessPiece::white) ? ChessPiece::black : ChessPiece::white;
 
     for (int start_square = 0; start_square < 64; start_square++)
     {
         int piece = squares[start_square];
-        if (piece == chess_pieces::none) continue;
+        if (piece == ChessPiece::none) continue;
 
         if (is_colour(piece, friendly_color))
         {
@@ -151,12 +167,12 @@ std::vector<Move_piece> generate_moves(int colour_to_move)
 std::unordered_map<char, int> load_position_fen(const std::string& fen)
 {
     std::unordered_map<char, int> piece_map = {
-        {'k', chess_pieces::king},
-        {'p', chess_pieces::pawn},
-        {'n', chess_pieces::knight},
-        {'b', chess_pieces::bishop},
-        {'r', chess_pieces::rook},
-        {'q', chess_pieces::queen}
+        {'k', ChessPiece::king},
+        {'p', ChessPiece::pawn},
+        {'n', ChessPiece::knight},
+        {'b', ChessPiece::bishop},
+        {'r', ChessPiece::rook},
+        {'q', ChessPiece::queen}
     };
 
     std::string board = fen.substr(0, fen.find(' '));
@@ -177,8 +193,8 @@ std::unordered_map<char, int> load_position_fen(const std::string& fen)
         else
         {
             int color = std::isupper(c)
-                        ? chess_pieces::white
-                        : chess_pieces::black;
+                        ? ChessPiece::white
+                        : ChessPiece::black;
 
             int piece = piece_map[std::tolower(c)];
             squares[row * 8 + col] = piece | color;
@@ -200,36 +216,56 @@ void draw_pieces()
     for (int index = 0; index < 64; index++)
     {
         int piece = squares[index];
-        if (piece == chess_pieces::none) continue;
+        if (piece == ChessPiece::none) continue;
 
         int row = index / 8;
         int col = index % 8;
 
         Sprite2D sprite = get_sprite(piece_to_sprite(piece));
 
-        Rectangle dest = {
+        Rectangle dst = {
             offset_x + col * square_size,
             offset_y + row * square_size,
             square_size,
             square_size
         };
-        Color color;
-        bool is_white = piece & chess_pieces::white;
-        bool is_black = piece & chess_pieces::black;
-        if (is_white) {
+        Color color = WHITE;
+        if (piece & ChessPiece::white) {
             color = WHITE;
         }
-        else if (is_black) {
+        else if (piece & ChessPiece::black) {
             color = GRAY;
         }
         DrawTexturePro(
             sprite.texture,
             sprite.src,
-            dest,
+            dst,
             {0, 0},
             0.0f,
             color
         );
+
+        bool hovered = CheckCollisionPointRec(GetMousePosition(), dst);
+        if (hovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            
+            selected_piece = piece;
+            moves.clear();
+            generate_sliding_moves(index, piece, ChessPiece::white, ChessPiece::black);
+
+            for (const Move_piece& m : moves) {
+                int file = m.target_square % 8;
+                int rank = m.target_square / 8;
+
+                float cx = board_x + file * square_size + square_size * 0.5f;
+                float cy = board_y + rank * square_size + square_size * 0.5f;
+
+                DrawCircle(cx, cy, square_size * 0.15f, Fade(BLACK, 0.5f));
+            }
+            std::cout << "[Piece Clicked]: " << piece << "[Moves]: " << moves[0] << std::endl;
+        }
+
+        
+
     }
 }
 
@@ -237,12 +273,12 @@ Type piece_to_sprite(int piece)
 {
     switch (piece & 7) // mask color bits
     {
-        case chess_pieces::pawn:   return Type::Pawn;
-        case chess_pieces::rook:   return Type::Rook;
-        case chess_pieces::knight: return Type::Knight;
-        case chess_pieces::bishop: return Type::Bishop;
-        case chess_pieces::queen:  return Type::Queen;
-        case chess_pieces::king:   return Type::King;
+        case ChessPiece::pawn:   return Type::Pawn;
+        case ChessPiece::rook:   return Type::Rook;
+        case ChessPiece::knight: return Type::Knight;
+        case ChessPiece::bishop: return Type::Bishop;
+        case ChessPiece::queen:  return Type::Queen;
+        case ChessPiece::king:   return Type::King;
         default:                   return Type::Pawn; // safe fallback
     }
 }

@@ -11,11 +11,12 @@ extern int squares[64];
 void create_chess_board();
 void precomputed_move_data();
 void draw_pieces();
+void update_board_metrics();
 Type piece_to_sprite(int piece);
 std::unordered_map<char, int> load_position_fen(const std::string& fen);
 
 // ====== Pieces ======
-class chess_pieces
+class ChessPiece
 {
 public:
     static const int none   = 0;

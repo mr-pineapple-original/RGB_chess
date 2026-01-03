@@ -7,8 +7,10 @@ void game_draw()
 {
     if(game_state==GameState::Started)
     {
-    create_chess_board();
-    load_position_fen(start_fen);
-    draw_pieces();
+        update_board_metrics();
+        create_chess_board();
+        load_position_fen(start_fen);
+        draw_pieces();
+    
     }
 }
